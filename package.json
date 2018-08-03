@@ -1,0 +1,21 @@
+{
+  "name": "word-filter-dfa",
+  "version": "0.0.2",
+  "author": "fengjie",
+  "description": "The word filter via dfa.",
+  "homepage": "https://github.com/niklaus0823/word-filter-dfa#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/niklaus0823/word-filter-dfa.git"
+  },
+  "bugs": "https://github.com/niklaus0823/word-filter-dfa/issues",
+  "engines": {
+    "node": ">=8"
+  },
+  "main": "./build/index.js",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^9.4.1"
+  }
+}

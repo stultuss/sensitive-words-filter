@@ -1,0 +1,18 @@
+{
+  "apps" : [{
+    "name"       : "agent-demo",
+    "script"     : "./demo.js",
+    "instances"  : "1",
+    "log_date_format"  : "YYYY-MM-DD",
+    "log_file"   : "./log/pm2.log",
+    "error_file" : "./log/pm2-err.log",
+    "out_file"   : "./log/pm2-out.log",
+    "pid_file"   : "./log/pm2.pid",
+    "exec_mode"  : "cluster_mode",
+    "port"       : 3701,
+    "env": {
+      "NODE_ENV": "development",
+      "DEBUG": "DEBUG:*"
+    }
+  }]
+}
