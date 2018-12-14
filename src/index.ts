@@ -20,8 +20,8 @@ export class WordFilter {
      *
      * @param {string[]} keywords
      */
-    public async init(keywords: string[]) {
-        await this._initTextFilterMap(keywords);
+    public init(keywords: string[]) {
+        this._initTextFilterMap(keywords);
         this._initialized = true;
     }
 
