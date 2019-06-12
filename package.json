@@ -1,6 +1,6 @@
 {
   "name": "word-filter-dfa",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "fengjie",
   "description": "The word filter via dfa.",
   "homepage": "https://github.com/niklaus0823/word-filter-dfa#readme",

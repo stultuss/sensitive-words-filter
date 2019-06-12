@@ -58,13 +58,13 @@ class WordFilter {
             let sWord = '';
             for (let j = i; j < searchValue.length; j++) {
                 if (!parent[searchValue[j]]) {
-                    found = false;
+                    found = (sWord.length > 0) ? true : false;
                     skip = j - i - 1;
                     parent = this._filterTextMap;
                     break;
                 }
                 sWord = sWord + searchValue[j];
-                if (parent[searchValue[j]].isEnd) {
+                if (parent[searchValue[j]].isEnd && Object.keys(parent[searchValue[j]]).length == 1) {
                     found = true;
                     skip = j - i;
                     parent = this._filterTextMap;
@@ -82,8 +82,8 @@ class WordFilter {
             for (let k = 0; k < skip; k++) {
                 stars = stars + replaceValue;
             }
-            let reg = new RegExp(sWord, 'g');
-            searchValue = searchValue.replace(reg, stars);
+            // let reg = new RegExp(sWord, 'g');
+            searchValue = searchValue.replace(sWord, stars);
         }
         return searchValue;
     }
