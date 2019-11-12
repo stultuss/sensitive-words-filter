@@ -1,20 +1,28 @@
-Word Filter
+sensitive-words-filter
 =========================
-The word filter via dfa
+文字过滤，支持敏感词匹配，由DFA算法实现
 
 ## Install
 
 ```bash
-npm install word-filter-dfa --save
+npm install sensitive-words-dfa-filter --save
 ```
 
 ## How to use
 
 ```javascript
-let wordFilter = require('word-filter-dfa');
-wordFilter.instance().init(['羔子', '王八', '王八羔子', '王八蛋']);
-console.log(wordFilter.instance().replace('你真是个王八,王八羔子,王八蛋', '*'));
-console.log(wordFilter.instance().replace('你真是个王八王八蛋', '*'));
-// 你真是个**,****,***
-// 你真是个*****
+let Filter = require('sensitive-words-dfa-filter');
+
+// 设定需要搜索的敏感字
+let search = [
+  'f',
+  'filter'
+];
+
+// 初始化文字过滤器，将敏感字做成字典
+Filter.instance().init(search);
+
+// 运行
+console.log(Filter.instance().replace('This is filter word!')); // This is ****** word!
+console.log(Filter.instance().replace('This is fffffilterfffff word!')); // This is *************** word!
 ```

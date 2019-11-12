@@ -1,21 +1,19 @@
 {
-  "name": "word-filter-dfa",
-  "version": "0.0.4",
+  "name": "sensitive-words-dfa-filter",
+  "version": "0.0.2",
   "author": "fengjie",
   "description": "The word filter via dfa.",
-  "homepage": "https://github.com/niklaus0823/word-filter-dfa#readme",
+  "homepage": "https://github.com/stultuss/sensitive-words-filter#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/niklaus0823/word-filter-dfa.git"
+    "url": "git+https://github.com/stultuss/sensitive-words-filter.git"
   },
-  "bugs": "https://github.com/niklaus0823/word-filter-dfa/issues",
+  "bugs": "https://github.com/stultuss/sensitive-words-filter/issues",
   "engines": {
     "node": ">=8"
   },
   "main": "./index.js",
   "license": "MIT",
   "dependencies": {},
-  "devDependencies": {
-    "@types/node": "^9.4.1"
-  }
+  "devDependencies": {}
 }
