@@ -1,6 +1,6 @@
 {
   "name": "sensitive-words-dfa-filter",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "fengjie",
   "description": "The word filter via dfa.",
   "homepage": "https://github.com/stultuss/sensitive-words-filter#readme",
