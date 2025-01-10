@@ -9,6 +9,12 @@ sensitive-words-filter
 
 > 文字过滤，支持敏感词匹配，由DFA算法实现
 
+## ChangeLog
+### 20250110 
+1. 优化代码结构。
+2. 增加识别敏感词中间填充了特殊字符的情况。
+3. replace 接口增加自定义特殊字符过滤字段。
+
 ## Install
 
 ```bash
@@ -30,8 +36,10 @@ let search = [
 Filter.instance().init(search);
 
 // 运行
-console.log(Filter.instance().replace('This is filter word!')); // This is ****** word!
-console.log(Filter.instance().replace('This is fffffilterfffff word!')); // This is *************** word!
+console.log(Filter.instance().replace('This is "fuck" filter word!')); // This is "****" filter word!
+console.log(Filter.instance().replace('This is "f u c k" filter word!')); // This is "*******" filter word!
+console.log(Filter.instance().replace('This is "f@u@c@k" filter word!')); // This is "*******" filter word!
+console.log(Filter.instance().replace('This is "fAuBcCk" filter word!', '?', 'ABC')); // This is "???????" filter word!
 ```
 
 [npm-image]: https://img.shields.io/npm/v/sensitive-words-dfa-filter.svg
