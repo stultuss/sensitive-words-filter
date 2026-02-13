@@ -122,8 +122,18 @@ class WordFilter {
                     matchEnd = j + 1;
                     j++;
                     if (node.isEnd) {
-                        // 保存 charCount，避免后续重算
-                        replacements.push({ start: i, end: matchEnd, charCount });
+                        // 检查是否已经有从相同起始位置的匹配
+                        const existingIndex = replacements.findIndex(r => r.start === i);
+                        if (existingIndex !== -1) {
+                            // 如果新匹配更长，才替换；否则保持现状
+                            if (charCount > replacements[existingIndex].charCount) {
+                                replacements[existingIndex] = { start: i, end: matchEnd, charCount };
+                            }
+                        }
+                        else {
+                            // 没有重复，直接添加
+                            replacements.push({ start: i, end: matchEnd, charCount });
+                        }
                     }
                 }
                 else if (charCount > 0 && this._isSkip(char)) {
