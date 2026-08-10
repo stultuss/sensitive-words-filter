@@ -2,7 +2,7 @@
   "name": "sensitive-words-dfa-filter",
   "version": "2.0.0",
   "author": "stultuss",
-  "description": "The word filter via dfa.",
+  "description": "A fast, DFA-based sensitive-word filter for Node.js. It scans text against a keyword dictionary and masks matches, while also detecting common obfuscation tricks such as inserting spaces, symbols, digits, or letters between the characters of a keyword.",
   "homepage": "https://github.com/stultuss/sensitive-words-filter#readme",
   "repository": {
     "type": "git",
