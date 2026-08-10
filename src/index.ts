@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 class WordNode {
     children: { [char: string]: WordNode };
     isEnd: boolean;
@@ -73,15 +76,18 @@ export class WordFilter {
     }
 
     /**
-     * 单例初始化
+     * 初始化敏感词库（重复调用会替换旧词库，而不是累积）
      *
-     * @param {string[]} keywords
+     * @param {string[] | string} keywords 敏感词数组，或词库文件/目录路径
      * @private
      */
-    public async init(keywords: string[]): Promise<void> {
+    public init(keywords: string[] | string): void {
         try {
+            this._isSkipCache.clear();
+            this._filterTextMap.children = {};
+            this._filterTextMap.isEnd = false;
             this._preloadSkipCache();  // 初始化时预加载所有特殊字符
-            this._initTextFilterMap(keywords);
+            this._initTextFilterMap(typeof keywords === 'string' ? this._loadKeywordsFromFile(keywords) : keywords);
             this._initialized = true;
         } catch (e) {
             console.error('WordFilter initialization failed:', e);
@@ -90,15 +96,49 @@ export class WordFilter {
     }
 
     /**
+     * 从敏感词文件/目录加载词库（支持 、 或换行分隔；传目录时递归读取其中所有文件）
+     * @private
+     */
+    private _loadKeywordsFromFile(filePath: string): string[] {
+        const keywords: string[] = [];
+        if (fs.statSync(filePath).isDirectory()) {
+            for (const name of fs.readdirSync(filePath)) {
+                const fullPath = path.join(filePath, name);
+                keywords.push(...this._loadKeywordsFromFile(fullPath));
+            }
+        } else if (fs.statSync(filePath).isFile()) {
+            const content = fs.readFileSync(filePath, 'utf8');
+            for (const keyword of content.split(/[、\r\n]+/)) {
+                const trimmed = keyword.trim();
+                if (trimmed) {
+                    keywords.push(trimmed);
+                }
+            }
+        }
+        return keywords;
+    }
+
+
+    /**
      * 检查字符是否应该被跳过（符号、数字、英文、CJK偏旁部首）
      *
      * 优化：所有可能的特殊字符都在初始化时预加载到缓存中
-     * 运行时只需要进行 O(1) 的缓存查询，无任何额外判断
+     * 运行时只需要进行 O(1) 的缓存查询
+     *
+     * 防误伤：字母/数字仅在已匹配部分包含非 ASCII 字符（中文等）时才允许跳过，
+     * 避免短英文词（如 root/admin）在英文文本中跨词被误命中
      * @private
      */
-    private _isSkip(char: string): boolean {
-        // 直接缓存查询，100% 命中率，O(1) 时间复杂度
-        return this._isSkipCache.get(char) ?? false;
+    private _isSkip(char: string, allowAlphaNumeric: boolean): boolean {
+        if (!this._isSkipCache.has(char)) {
+            return false;
+        }
+        if (allowAlphaNumeric) {
+            return true;
+        }
+        const code = char.charCodeAt(0);
+        const isAlphaNumeric = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+        return !isAlphaNumeric;
     }
 
     /**
@@ -120,16 +160,22 @@ export class WordFilter {
         }
 
         const replacements: Replacement[] = [];
+
         for (let i = 0; i < searchValue.length; i++) {
             let node = this._filterTextMap;
             let charCount = 0;
             let j = i;
             let matchEnd = i;
+            let hasNonAscii = false;
 
             while (j < searchValue.length) {
                 const char = searchValue[j].toLowerCase();
+
                 if (node.children[char]) {
                     node = node.children[char];
+                    if (char.charCodeAt(0) > 127) {
+                        hasNonAscii = true;
+                    }
                     charCount++;
                     matchEnd = j + 1;
                     j++;
@@ -147,7 +193,7 @@ export class WordFilter {
                             replacements.push({ start: i, end: matchEnd, charCount });
                         }
                     }
-                } else if (charCount > 0 && this._isSkip(char)) {
+                } else if (charCount > 0 && this._isSkip(char, hasNonAscii)) {
                     // _isSkip 使用缓存
                     matchEnd = j + 1;
                     j++;
@@ -173,7 +219,8 @@ export class WordFilter {
     private _initTextFilterMap(keywords: string[]) {
         if (keywords) {
             for (const keyword of keywords) {
-                if (!keyword) continue;
+                // 忽略 ASCII 单字关键字（如 "a"），避免过度匹配；中文等非 ASCII 单字保留（如"赌"）
+                if (!keyword || (keyword.length == 1 && keyword.charCodeAt(0) <= 127)) continue;
                 let node = this._filterTextMap;
                 for (const char of keyword) {
                     const lcChar = char.toLowerCase();
@@ -185,6 +232,27 @@ export class WordFilter {
                 node.isEnd = true;
             }
         }
+    }
+
+    /**
+     * 获取缓存统计信息（用于性能监控）
+     */
+    public getCacheStats(): { size: number; entries: string[] } {
+        return {
+            size: this._isSkipCache.size,
+            entries: Array.from(this._isSkipCache.keys())
+        };
+    }
+
+    /**
+     * 完整重置过滤器：清空跳过缓存、词库和初始化状态
+     * 调用后需重新 init 才能继续使用
+     */
+    public clearCache(): void {
+        this._isSkipCache.clear();
+        this._filterTextMap.children = {};
+        this._filterTextMap.isEnd = false;
+        this._initialized = false;
     }
 }
 

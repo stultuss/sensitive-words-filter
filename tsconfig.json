@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "strict": false,
+    "strictNullChecks": false,
     "target": "ES6",
     "module": "commonjs",
     "sourceMap": false,
@@ -7,12 +9,23 @@
     "rootDir": "src",
     "outDir": "build",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "types": [
+      "node"
+    ],
+    "skipLibCheck": true,
+    "removeComments": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.d.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "build"
   ]
 }

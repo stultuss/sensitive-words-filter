@@ -1,19 +1,18 @@
-sensitive-words-filter
-=========================
+# sensitive-words-filter
+
 [![NPM Version][npm-image]][npm-url]
 [![NPM Downloads][downloads-image]][downloads-url]
-[![Build][travis-image]][travis-url]
-[![Linux Build][travis-linux-image]][travis-linux-url]
-[![Windows Build][travis-windows-image]][travis-windows-url]
-[![Test Coverage][coveralls-image]][coveralls-url]
 
-> 文字过滤，支持敏感词匹配，由DFA算法实现
+A fast, DFA-based sensitive-word filter for Node.js. It scans text against a keyword dictionary and masks matches, while also detecting common obfuscation tricks such as inserting spaces, symbols, digits, or letters between the characters of a keyword.
 
-## ChangeLog
-### 20250110 
-1. 优化代码结构。
-2. 增加识别敏感词中间填充了特殊字符的情况。
-3. replace 接口增加自定义特殊字符过滤字段。
+## Features
+
+- **Trie-based DFA engine** — keywords are compiled into a prefix tree for fast matching
+- **Obfuscation detection** — matches keywords even when filler characters are inserted between keyword characters
+- **Longest-match** — when keywords overlap (e.g. `AB` and `ABC`), the longer match wins
+- **Case-insensitive** — keywords and input text are matched case-insensitively
+- **Flexible keyword loading** — pass an array, a single file, or a directory of keyword files
+- **Singleton** — reuse one filter instance across the whole application
 
 ## Install
 
@@ -21,37 +20,113 @@ sensitive-words-filter
 npm install sensitive-words-dfa-filter --save
 ```
 
-## How to use
+## Quick start
 
 ```javascript
-let Filter = require('sensitive-words-dfa-filter');
+const WordFilter = require('sensitive-words-dfa-filter');
 
-// 设定需要搜索的敏感字
-let search = [
-    'AB', 'ABC', '治国'
-];
+const filter = WordFilter.instance();
 
-// 初始化文字过滤器，将敏感字做成字典
-Filter.instance().init(search);
+// Load keywords from an array (or a file / directory, see below)
+filter.init(['AB', 'ABC', '治国']);
 
-// 运行
-// This is "**｜**｜**｜**｜**" filter word!
-console.log(Filter.instance().replace('This is "AB｜A B｜AAB｜A1B｜A@B" filter word!'));T
-// This is "***｜***｜***｜***" filter word!
-console.log(Filter.instance().replace('This is "ABC｜A B C｜A1B1C｜A@B@C" filter word!'));
+// Basic matching
+console.log(filter.replace('This is "AB｜A B｜AAB｜A1B｜A@B" filter word!'));
+// This is "**｜**｜A**｜A1B｜**" filter word!
+
+console.log(filter.replace('This is "ABC｜A B C｜A1B1C｜A@B@C" filter word!'));
+// This is "***｜***｜A1B1C｜***" filter word!
+
+// Custom replacement character
+console.log(filter.replace('This is "治国｜治 国｜治A国｜治1国｜治@国" filter word!', '?'));
 // This is "??｜??｜??｜??｜??" filter word!
-console.log(Filter.instance().replace('This is "治国｜治 国｜治A国｜治1国｜治@国" filter word!', '?', 'ABC'));
 ```
+
+## Loading keywords
+
+`init()` accepts either an array of keywords or a path:
+
+| Input | Example | Notes |
+|---|---|---|
+| Array | `filter.init(['赌博', '诈骗'])` | Simple in-code keyword list |
+| File | `filter.init('/path/to/keywords.txt')` | Reads the file; keywords separated by `、` or newlines |
+| Directory | `filter.init('/path/to/keywords')` | Reads every file inside the directory, including subdirectories |
+
+Example keyword file:
+
+```text
+赌博、诈骗、禁言、敏感词
+exploit
+drug
+```
+
+Empty entries and surrounding whitespace are ignored.
+
+## API
+
+### `WordFilter.instance()`
+
+Returns the shared singleton instance.
+
+### `init(keywords: string[] | string): void`
+
+Synchronously builds the matching dictionary.
+
+- `keywords` — an array of keyword strings, or a path to a keyword file/directory.
+- Calling `init()` again **replaces** the existing dictionary.
+
+### `replace(searchValue: string, replaceValue?: string): string`
+
+Scans `searchValue` and replaces every matched keyword with `replaceValue` repeated once per matched keyword character (default `*`).
+
+- Returns `searchValue` unchanged if the filter has not been initialized.
+
+### `getCacheStats(): { size: number; entries: string[] }`
+
+Returns the size of the preloaded "skippable-character" cache and the cached characters (useful for debugging and performance monitoring).
+
+### `clearCache(): void`
+
+Fully resets the filter: clears the preloaded character cache, the keyword dictionary, and the initialization state. Call `init()` again before using the filter.
+
+## Matching rules
+
+- **Case-insensitive**: `Text` matches keyword `text`.
+- **Longest match wins**: with keywords `AB` and `ABC`, input `ABC` is masked as `***`.
+- **Filler characters can be skipped** between keyword characters:
+
+| Filler type | Skipped by default? | Example |
+|---|---|---|
+| Symbols (`@`, `#`, `.`, `~`, ...) | Always | `A@B` matches `AB` |
+| Spaces / whitespace | Always | `A B` matches `AB` |
+| CJK radicals | Always | `中灬国` matches `中国` |
+| Digits (`0-9`) | Only when the matched part already contains non-ASCII characters | `治1国` matches `治国`; `A1B` does **not** match `AB` |
+| Letters (`a-z`, `A-Z`) | Only when the matched part already contains non-ASCII characters | `治A国` matches `治国`; `AAB` becomes `A**` |
+
+The non-ASCII rule prevents false positives in pure English text: with keyword `text`, the input `This is text` only masks `text` itself — the leading words are left untouched.
+
+- **Single-character ASCII keywords are ignored** (e.g. `a`) to avoid over-matching; single-character CJK keywords (e.g. `赌`) are supported.
+- **Overlapping matches** are applied from longest to shortest so the final result stays correct.
+
+## Development
+
+```bash
+npm install
+npm test        # compile and run all test suites
+npm run build   # compile src/index.ts to build/index.js
+```
+
+Test suites:
+
+- `tests/WordsFilter.test.ts` — 100 fixture-based integration cases (fails the run on any failure)
+- `tests/WordsFilter-New.test.ts` — 60 additional fixture-based cases (fails the run on any failure)
+- `tests/unit.test.ts` — 11 focused unit tests with assertions
+
+## License
+
+[MIT](./LICENSE)
 
 [npm-image]: https://img.shields.io/npm/v/sensitive-words-dfa-filter.svg
 [npm-url]: https://npmjs.org/package/sensitive-words-dfa-filter
-[downloads-image]: https://img.shields.io/npm/dm/word-filter-dfa.svg
-[downloads-url]: https://npmjs.org/package/word-filter-dfa
-[travis-image]: https://travis-ci.org/stultuss/sensitive-words-filter.svg?branch=master
-[travis-url]: https://travis-ci.org/stultuss/sensitive-words-filter
-[travis-linux-image]: https://img.shields.io/travis/stultuss/sensitive-words-filter/master.svg?label=linux
-[travis-linux-url]: https://travis-ci.org/stultuss/sensitive-words-filter
-[travis-windows-image]: https://img.shields.io/travis/stultuss/sensitive-words-filter/master.svg?label=windows
-[travis-windows-url]: https://travis-ci.org/stultuss/sensitive-words-filter
-[coveralls-image]: https://img.shields.io/coveralls/stultuss/sensitive-words-filter/master.svg
-[coveralls-url]: https://coveralls.io/r/stultuss/sensitive-words-filter?branch=master
+[downloads-image]: https://img.shields.io/npm/dm/sensitive-words-dfa-filter.svg
+[downloads-url]: https://npmjs.org/package/sensitive-words-dfa-filter

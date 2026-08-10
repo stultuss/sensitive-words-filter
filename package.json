@@ -14,16 +14,12 @@
   },
   "main": "./index.js",
   "scripts": {
-    "test": "jest",
-    "coveralls": "jest --coverage && cat ./coverage/lcov.info | coveralls"
+    "build": "tsc",
+    "test": "tsc --rootDir . --outDir .test-build --esModuleInterop --skipLibCheck --types node --target es2017 --module commonjs src/index.ts tests/WordsFilter.test.ts tests/WordsFilter-New.test.ts tests/unit.test.ts && node .test-build/tests/WordsFilter.test.js && node .test-build/tests/WordsFilter-New.test.js && node .test-build/tests/unit.test.js"
   },
   "license": "MIT",
-  "dependencies": {},
   "devDependencies": {
-    "@types/jest": "^24.0.22",
-    "coveralls": "^3.0.7",
-    "jest": "^24.9.0",
-    "ts-jest": "^24.1.0",
-    "typescript": "^3.7.2"
+    "@types/node": "^26.2.0",
+    "typescript": "^5.9.2"
   }
 }
