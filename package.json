@@ -1,6 +1,6 @@
 {
   "name": "sensitive-words-dfa-filter",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "author": "stultuss",
   "description": "The word filter via dfa.",
   "homepage": "https://github.com/stultuss/sensitive-words-filter#readme",
@@ -10,9 +10,13 @@
   },
   "bugs": "https://github.com/stultuss/sensitive-words-filter/issues",
   "engines": {
-    "node": ">=8"
+    "node": ">=18"
   },
   "main": "./index.js",
+  "files": [
+    "build",
+    "index.js"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "tsc --rootDir . --outDir .test-build --esModuleInterop --skipLibCheck --types node --target es2017 --module commonjs src/index.ts tests/WordsFilter.test.ts tests/WordsFilter-New.test.ts tests/unit.test.ts && node .test-build/tests/WordsFilter.test.js && node .test-build/tests/WordsFilter-New.test.js && node .test-build/tests/unit.test.js"

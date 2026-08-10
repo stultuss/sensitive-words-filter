@@ -2,6 +2,7 @@
 
 [![NPM Version][npm-image]][npm-url]
 [![NPM Downloads][downloads-image]][downloads-url]
+[![CI][ci-image]][ci-url]
 
 A fast, DFA-based sensitive-word filter for Node.js. It scans text against a keyword dictionary and masks matches, while also detecting common obfuscation tricks such as inserting spaces, symbols, digits, or letters between the characters of a keyword.
 
@@ -130,3 +131,5 @@ Test suites:
 [npm-url]: https://npmjs.org/package/sensitive-words-dfa-filter
 [downloads-image]: https://img.shields.io/npm/dm/sensitive-words-dfa-filter.svg
 [downloads-url]: https://npmjs.org/package/sensitive-words-dfa-filter
+[ci-image]: https://github.com/stultuss/sensitive-words-filter/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/stultuss/sensitive-words-filter/actions/workflows/ci.yml
