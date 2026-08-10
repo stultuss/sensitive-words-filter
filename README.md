@@ -21,6 +21,8 @@ A fast, DFA-based sensitive-word filter for Node.js. It scans text against a key
 npm install sensitive-words-dfa-filter --save
 ```
 
+TypeScript users get full type hints out of the box — the package ships with type declarations.
+
 ## Quick start
 
 ```javascript

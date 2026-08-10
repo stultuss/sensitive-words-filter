@@ -2,20 +2,19 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Security fixes are provided for the latest minor release of the current major version.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 2.x     | :white_check_mark: |
+| 1.x     | :x:                |
+| < 1.0   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Please report security vulnerabilities privately via GitHub's
+[private vulnerability reporting](https://github.com/stultuss/sensitive-words-filter/security/advisories/new).
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Include a description of the issue, the affected versions, and (if possible) a minimal reproduction.
+You can expect an initial response within 7 days. Once confirmed, a fix will be released
+in a patch or minor update, and an advisory will be published after the fix is available.
