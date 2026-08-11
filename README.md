@@ -44,6 +44,14 @@ console.log(filter.replace('This is "ABC｜A B C｜A1B1C｜A@B@C" filter word!')
 // Custom replacement character
 console.log(filter.replace('This is "治国｜治 国｜治A国｜治1国｜治@国" filter word!', '?'));
 // This is "??｜??｜??｜??｜??" filter word!
+
+// Matching modes
+// Default (auto): per-match rules — CJK keywords tolerate letter/digit fillers
+// (治A国 matches 治国), while ASCII keywords do not (A1B stays unchanged).
+// Optional strict mode: ASCII keywords match only at word boundaries.
+filter.init(['admin'], { wordBoundary: true });
+console.log(filter.replace('administrator admin admin123'));
+// administrator ***** admin123
 ```
 
 ## Loading keywords
