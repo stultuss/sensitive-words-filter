@@ -223,6 +223,18 @@ test('lenient 标注-与 wordBoundary 叠加', () => {
     assert.strictEqual(Filter.instance().replace('xd1rugy'), 'xd1rugy');
 });
 
+test('lenient 标注-不跨词误报', () => {
+    Filter.instance().init(['admin', { word: 'drug', lenient: true }]);
+    assert.strictEqual(Filter.instance().replace('admin drug'), '***** ****');
+    assert.strictEqual(Filter.instance().replace('administrator d1rug'), '*****istrator ****');
+});
+
+test('lenient 标注-字母/数字填充有数量上限', () => {
+    Filter.instance().init([{ word: 'drug', lenient: true }]);
+    assert.strictEqual(Filter.instance().replace('d1r2u3g'), '****');
+    assert.strictEqual(Filter.instance().replace('d11r22u33g'), 'd11r22u33g');
+});
+
 // ===== 运行器 =====
 
 let passCount = 0;

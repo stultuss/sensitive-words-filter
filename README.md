@@ -47,19 +47,17 @@ console.log(filter.replace('This is "治国｜治 国｜治A国｜治1国｜治@
 // This is "??｜??｜??｜??｜??" filter word!
 
 // Matching modes
-// Default (auto): per-match rules — CJK keywords tolerate letter/digit fillers
-// (治A国 matches 治国), while ASCII keywords do not (A1B stays unchanged).
-// Word-boundary mode: for pure-English environments only — ASCII keywords
-// match at word boundaries, so admin no longer matches administrator.
+// Word-boundary mode: for pure-English environments — ASCII keywords match
+// only at word boundaries (admin no longer matches administrator).
 filter.init(['admin'], { wordBoundary: true });
-
 console.log(filter.replace('administrator admin admin123'));
 // administrator ***** admin123
 
-// Per-keyword lenient mode: only drug tolerates letter/digit fillers.
+// Per-keyword lenient mode: only drug tolerates letter/digit fillers
+// (up to 3, so d1rug matches drug). Substring semantics still apply.
 filter.init(['admin', { word: 'drug', lenient: true }]);
-console.log(filter.replace('d1rug admin'));
-// **** *****
+console.log(filter.replace('d1rug admin drugabc'));
+// **** ***** ****abc
 ```
 
 ## Loading keywords
@@ -97,7 +95,7 @@ Creates an independent filter with its own dictionary — useful when different 
 Synchronously builds the matching dictionary.
 
 - `keywords` — an array of keyword strings or entries (`{ word, lenient }`), or a path to a keyword file/directory.
-- `lenient` (per entry) — when `true`, this keyword tolerates letters/digits as fillers even in pure-ASCII matches (`d1rug` matches `drug`). Off by default; note this also means `A1B` matches `AB` if `AB` is tagged lenient.
+- `lenient` (per entry) — when `true`, this keyword tolerates up to 3 letters/digits as fillers even in pure-ASCII matches (`d1rug` matches `drug`, `d1r2u3g` too; `d11r22u33g` does not). The cap prevents the keyword's first letter from matching across unrelated words (e.g. `admin drug` does **not** match `drug` from the `d` of `admin`). Off by default; note this also means `A1B` matches `AB` if `AB` is tagged lenient.
 - `options.wordBoundary` — a word-segmentation mode intended for pure-English environments. When `true`, pure-ASCII keywords only match at word boundaries: the character immediately before and after the keyword must not be a letter, digit, or underscore (same definition as `\b`), so `admin` no longer matches inside `administrator`. Off by default; CJK keywords are not affected.
 - Calling `init()` again **replaces** the existing dictionary.
 
@@ -134,7 +132,7 @@ Fully resets the filter: clears the preloaded character cache, the keyword dicti
 The non-ASCII rule prevents false positives in pure English text: with keyword `text`, the input `This is text` only masks `text` itself — the leading words are left untouched.
 
 - **English keywords match as plain substrings by default** — `admin` matches inside `administrator`, and `sex` inside `sexy`. For pure-English environments, pass `{ wordBoundary: true }` to `init()` to switch to word-segmentation mode: ASCII keywords only match at word boundaries (e.g. `init(['admin'], { wordBoundary: true })` masks `the admin` but leaves `administrator` and `admin123` untouched). CJK keywords are not affected; ASCII keywords are boundary-checked regardless of the surrounding text language.
-- **Per-keyword lenient mode** — tag a keyword as `{ word: 'drug', lenient: true }` to allow letter/digit fillers for that keyword even when the match is pure ASCII (`d1rug` matches `drug`). This is opt-in because it is a precision tradeoff: if `AB` is tagged lenient, `A1B` matches `AB` too.
+- **Per-keyword lenient mode** — tag a keyword as `{ word: 'drug', lenient: true }` to allow up to 3 letter/digit fillers for that keyword even when the match is pure ASCII (`d1rug` matches `drug`). The cap stops cross-word matches (`admin drug` does not match `drug` via the `d` of `admin`). This is opt-in because it is a precision tradeoff: if `AB` is tagged lenient, `A1B` matches `AB` too.
 - **Single-character ASCII keywords are ignored** (e.g. `a`) to avoid over-matching; single-character CJK keywords (e.g. `赌`) are supported.
 - **Overlapping matches** are merged into a single masked region: with keywords `ABC` and `BCD`, the input `A B C D` is masked as `****`.
 

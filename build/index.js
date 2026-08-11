@@ -49,6 +49,7 @@ function isAsciiWordChar(char) {
     const code = char.charCodeAt(0);
     return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
 }
+const MAX_LENIENT_SKIP_CHARS = 3;
 class WordFilter {
     constructor() {
         this._isSkipCache = new Map();
@@ -145,6 +146,7 @@ class WordFilter {
             let bestEnd = -1;
             let hasNonAscii = false;
             let bestHasNonAscii = false;
+            let skipCount = 0;
             keywordPositions.length = 0;
             while (j < n) {
                 const char = searchValue[j].toLowerCase();
@@ -163,8 +165,19 @@ class WordFilter {
                         bestHasNonAscii = hasNonAscii;
                     }
                 }
-                else if (charCount > 0 && this._isSkip(char, hasNonAscii || node.lenient)) {
-                    j++;
+                else if (charCount > 0) {
+                    const code = char.charCodeAt(0);
+                    const isAlphaNum = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+                    const lenientSkip = isAlphaNum && !hasNonAscii && node.lenient && skipCount < MAX_LENIENT_SKIP_CHARS;
+                    if (this._isSkip(char, hasNonAscii || lenientSkip)) {
+                        if (lenientSkip) {
+                            skipCount++;
+                        }
+                        j++;
+                    }
+                    else {
+                        break;
+                    }
                 }
                 else {
                     break;

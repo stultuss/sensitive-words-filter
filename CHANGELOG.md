@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file.
 ### Added
 
 - `init(keywords, { wordBoundary: true })` — word-segmentation mode for pure-English environments (off by default; with it enabled, `admin` no longer matches inside `administrator`)
-- Per-keyword lenient tagging — `init([{ word: 'drug', lenient: true }])` lets a single ASCII keyword tolerate letter/digit fillers (`d1rug` matches `drug`) while every other keyword stays strict
+- Per-keyword lenient tagging — `init([{ word: 'drug', lenient: true }])` lets a single ASCII keyword tolerate up to 3 letter/digit fillers (`d1rug` matches `drug`) while every other keyword stays strict; the cap prevents cross-word false positives (`admin drug` is not matched via the `d` of `admin`)
 - Full-width filler characters: ideographic space `　`, enumeration comma `、`, ellipsis `…`, full-width letters `Ａ-Ｚ ａ-ｚ` and digits `０-９`
 - Public constructor — `new WordFilter()` creates an independent instance; `WordFilter.instance()` remains the shared singleton
 - `benchmark/bench.js` and the `npm run bench` script

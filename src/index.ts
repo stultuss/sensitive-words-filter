@@ -40,6 +40,13 @@ function isAsciiWordChar(char: string): boolean {
     return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
 }
 
+/**
+ * lenient 关键词允许的字母/数字填充上限。
+ * 没有上限时，lenient 词的首字符会从其他单词内部开始跨词匹配
+ * （如 "admin drug" 里的 d 会把 "min dru" 当填充），造成大面积误报。
+ */
+const MAX_LENIENT_SKIP_CHARS = 3;
+
 export class WordFilter {
     private static _instance: WordFilter | undefined;
     private _initialized: boolean;
@@ -196,6 +203,7 @@ export class WordFilter {
             let bestEnd = -1;
             let hasNonAscii = false;
             let bestHasNonAscii = false;
+            let skipCount = 0;
             keywordPositions.length = 0;
 
             while (j < n) {
@@ -217,8 +225,19 @@ export class WordFilter {
                         bestEnd = j;
                         bestHasNonAscii = hasNonAscii;
                     }
-                } else if (charCount > 0 && this._isSkip(char, hasNonAscii || node.lenient)) {
-                    j++;
+                } else if (charCount > 0) {
+                    const code = char.charCodeAt(0);
+                    const isAlphaNum = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+                    // lenient 只放行少量字母/数字填充；符号/空格不受限，且不计入上限
+                    const lenientSkip = isAlphaNum && !hasNonAscii && node.lenient && skipCount < MAX_LENIENT_SKIP_CHARS;
+                    if (this._isSkip(char, hasNonAscii || lenientSkip)) {
+                        if (lenientSkip) {
+                            skipCount++;
+                        }
+                        j++;
+                    } else {
+                        break;
+                    }
                 } else {
                     break;
                 }
