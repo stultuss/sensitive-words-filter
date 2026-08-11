@@ -53,11 +53,12 @@ filter.init(['admin'], { wordBoundary: true });
 console.log(filter.replace('administrator admin admin123'));
 // administrator ***** admin123
 
-// Per-keyword lenient mode: only drug tolerates letter/digit fillers
-// (up to 3, so d1rug matches drug). Substring semantics still apply.
-filter.init(['admin', { word: 'drug', lenient: true }]);
+// Both knobs compose in one call: wordBoundary is global, lenient is per
+// keyword — d1rug matches drug (up to 3 letter/digit fillers), while
+// drugabc does not match drug anymore because of the word boundary.
+filter.init(['admin', { word: 'drug', lenient: true }], { wordBoundary: true });
 console.log(filter.replace('d1rug admin drugabc'));
-// **** ***** ****abc
+// **** ***** drugabc
 ```
 
 ## Loading keywords
@@ -96,7 +97,7 @@ Synchronously builds the matching dictionary.
 
 - `keywords` — an array of keyword strings or entries (`{ word, lenient }`), or a path to a keyword file/directory.
 - `lenient` (per entry) — when `true`, this keyword tolerates up to 3 letters/digits as fillers even in pure-ASCII matches (`d1rug` matches `drug`, `d1r2u3g` too; `d11r22u33g` does not). The cap prevents the keyword's first letter from matching across unrelated words (e.g. `admin drug` does **not** match `drug` from the `d` of `admin`). Off by default; note this also means `A1B` matches `AB` if `AB` is tagged lenient.
-- `options.wordBoundary` — a word-segmentation mode intended for pure-English environments. When `true`, pure-ASCII keywords only match at word boundaries: the character immediately before and after the keyword must not be a letter, digit, or underscore (same definition as `\b`), so `admin` no longer matches inside `administrator`. Off by default; CJK keywords are not affected.
+- `options.wordBoundary` — a word-segmentation mode intended for pure-English environments. When `true`, pure-ASCII keywords only match at word boundaries: the character immediately before and after the keyword must not be a letter, digit, or underscore (same definition as `\b`), so `admin` no longer matches inside `administrator`. Off by default; CJK keywords are not affected. Composes with per-keyword `lenient` entries in the same call.
 - Calling `init()` again **replaces** the existing dictionary.
 
 ### `replace(searchValue: string, replaceValue?: string): string`
