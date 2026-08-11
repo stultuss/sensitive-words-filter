@@ -126,7 +126,7 @@ Fully resets the filter: clears the preloaded character cache, the keyword dicti
 
 The non-ASCII rule prevents false positives in pure English text: with keyword `text`, the input `This is text` only masks `text` itself — the leading words are left untouched.
 
-- **English keywords match as plain substrings by default** — `admin` matches inside `administrator`, and `sex` inside `sexy`. For pure-English environments, pass `{ wordBoundary: true }` to `init()` to switch to word-segmentation mode: ASCII keywords only match at word boundaries (e.g. `init(['admin'], { wordBoundary: true })` masks `the admin` but leaves `administrator` and `admin123` untouched). Chinese keywords and mixed-language text are not affected by this option.
+- **English keywords match as plain substrings by default** — `admin` matches inside `administrator`, and `sex` inside `sexy`. For pure-English environments, pass `{ wordBoundary: true }` to `init()` to switch to word-segmentation mode: ASCII keywords only match at word boundaries (e.g. `init(['admin'], { wordBoundary: true })` masks `the admin` but leaves `administrator` and `admin123` untouched). CJK keywords are not affected; ASCII keywords are boundary-checked regardless of the surrounding text language.
 - **Single-character ASCII keywords are ignored** (e.g. `a`) to avoid over-matching; single-character CJK keywords (e.g. `赌`) are supported.
 - **Overlapping matches** are merged into a single masked region: with keywords `ABC` and `BCD`, the input `A B C D` is masked as `****`.
 
