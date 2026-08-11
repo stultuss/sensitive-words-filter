@@ -4,11 +4,11 @@
 [![NPM Downloads][downloads-image]][downloads-url]
 [![CI][ci-image]][ci-url]
 
-A fast, DFA-based sensitive-word filter for Node.js. It scans text against a keyword dictionary and masks matches, while also detecting common obfuscation tricks such as inserting spaces, symbols, digits, or letters between the characters of a keyword.
+A trie-based sensitive-word filter for Node.js. It scans text against a keyword dictionary and masks matches, while also detecting common obfuscation tricks such as inserting spaces, symbols, digits, or letters between the characters of a keyword.
 
 ## Features
 
-- **Trie-based DFA engine** — keywords are compiled into a prefix tree for fast matching
+- **Trie-based engine** — keywords are compiled into a prefix tree; scanning starts from every character with per-match filler skipping
 - **Obfuscation detection** — matches keywords even when filler characters are inserted between keyword characters
 - **Longest-match** — when keywords overlap (e.g. `AB` and `ABC`), the longer match wins
 - **Case-insensitive** — keywords and input text are matched case-insensitively
@@ -60,8 +60,8 @@ Example keyword file:
 
 ```text
 赌博、诈骗、禁言、敏感词
-exploit
-drug
+spam
+cheat
 ```
 
 Empty entries and surrounding whitespace are ignored.
@@ -120,19 +120,42 @@ The non-ASCII rule prevents false positives in pure English text: with keyword `
 - **Single-character ASCII keywords are ignored** (e.g. `a`) to avoid over-matching; single-character CJK keywords (e.g. `赌`) are supported.
 - **Overlapping matches** are merged into a single masked region: with keywords `ABC` and `BCD`, the input `A B C D` is masked as `****`.
 
+## Performance
+
+Measured locally (Node.js 24, v2.1.0) with an 11-keyword dictionary and ~1MB inputs:
+
+| Input | Time | Throughput |
+|---|---|---|
+| Chinese text | ~540 ms | ~1.9 MB/s |
+| English text | ~190 ms | ~5.2 MB/s |
+| Mixed Chinese/English | ~370 ms | ~2.7 MB/s |
+
+Numbers vary by machine, dictionary size, and hit rate — run `npm run bench` on your own hardware. The engine is a trie with per-position scanning (not an Aho-Corasick automaton), which is plenty for interactive filtering but not for multi-GB/s pipelines.
+
+A pathological case — a single 500-character keyword over 20KB of repetitive text — takes ~0.4s, since nearly every position walks the whole keyword path.
+
+## Limitations
+
+- **Substring matching by default** — English keywords match inside longer words (`admin` matches `administrator`). Enable `{ wordBoundary: true }` (see Matching rules) for stricter behavior.
+- **No full-width normalization** — full-width `ＡＢ` does not match keyword `AB`; full-width letters/digits are only treated as skippable fillers between keyword characters.
+- **Curated obfuscation coverage** — the skippable-filler set is a fixed list (symbols, whitespace, CJK radicals, full-width characters). Exotic tricks such as emoji, zero-width characters, or homoglyphs are not covered.
+- **Memory** — each `replace()` call allocates a small amount of memory proportional to the input length (coverage/star arrays); fine for typical messages, worth noting for very large documents.
+- **Pathological inputs** — a very long keyword over highly repetitive text can approach O(n × keyword length).
+
 ## Development
 
 ```bash
 npm install
 npm test        # compile and run all test suites
 npm run build   # compile src/index.ts to build/index.js
+npm run bench   # local performance benchmark
 ```
 
 Test suites:
 
 - `tests/WordsFilter.test.ts` — 100 fixture-based integration cases (fails the run on any failure)
 - `tests/WordsFilter-New.test.ts` — 60 additional fixture-based cases (fails the run on any failure)
-- `tests/unit.test.ts` — 23 focused unit tests with assertions
+- `tests/unit.test.ts` — 29 focused unit tests with assertions
 
 ## License
 

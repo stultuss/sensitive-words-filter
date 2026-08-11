@@ -1,8 +1,8 @@
 {
   "name": "sensitive-words-dfa-filter",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": "stultuss",
-  "description": "A fast, DFA-based sensitive-word filter for Node.js. It scans text against a keyword dictionary and masks matches, while also detecting common obfuscation tricks such as inserting spaces, symbols, digits, or letters between the characters of a keyword.",
+  "description": "A trie-based sensitive-word filter for Node.js. It scans text against a keyword dictionary and masks matches, while also detecting common obfuscation tricks such as inserting spaces, symbols, digits, or letters between the characters of a keyword.",
   "homepage": "https://github.com/stultuss/sensitive-words-filter#readme",
   "repository": {
     "type": "git",
@@ -16,11 +16,13 @@
   "types": "build/index.d.ts",
   "files": [
     "build",
-    "index.js"
+    "index.js",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc",
-    "test": "tsc --rootDir . --outDir .test-build --esModuleInterop --skipLibCheck --types node --target es2017 --module commonjs src/index.ts tests/WordsFilter.test.ts tests/WordsFilter-New.test.ts tests/unit.test.ts && node .test-build/tests/WordsFilter.test.js && node .test-build/tests/WordsFilter-New.test.js && node .test-build/tests/unit.test.js"
+    "test": "tsc --rootDir . --outDir .test-build --esModuleInterop --skipLibCheck --types node --target es2017 --module commonjs src/index.ts tests/WordsFilter.test.ts tests/WordsFilter-New.test.ts tests/unit.test.ts && node .test-build/tests/WordsFilter.test.js && node .test-build/tests/WordsFilter-New.test.js && node .test-build/tests/unit.test.js",
+    "bench": "node benchmark/bench.js"
   },
   "license": "MIT",
   "devDependencies": {
