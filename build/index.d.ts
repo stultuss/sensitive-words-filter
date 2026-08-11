@@ -1,3 +1,7 @@
+export interface KeywordEntry {
+    word: string;
+    lenient?: boolean;
+}
 export declare class WordFilter {
     private static _instance;
     private _initialized;
@@ -7,7 +11,7 @@ export declare class WordFilter {
     constructor();
     static instance(): WordFilter;
     private _preloadSkipCache;
-    init(keywords: string[] | string, options?: {
+    init(keywords: Array<string | KeywordEntry> | string, options?: {
         wordBoundary?: boolean;
     }): void;
     private _loadKeywordsFromFile;

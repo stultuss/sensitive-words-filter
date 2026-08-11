@@ -4,11 +4,22 @@ import * as path from 'path';
 class WordNode {
     children: { [char: string]: WordNode };
     isEnd: boolean;
+    lenient: boolean;
 
     constructor() {
         this.children = {};
         this.isEnd = false;
+        this.lenient = false;
     }
+}
+
+/**
+ * 关键词条目：可用字符串，或用 { word, lenient } 指定该词是否允许
+ * 字母/数字作填充（默认 false，保持纯 ASCII 匹配的严格行为）
+ */
+export interface KeywordEntry {
+    word: string;
+    lenient?: boolean;
 }
 
 /**
@@ -101,7 +112,7 @@ export class WordFilter {
      * @param {string[] | string} keywords 敏感词数组，或词库文件/目录路径
      * @private
      */
-    public init(keywords: string[] | string, options?: { wordBoundary?: boolean }): void {
+    public init(keywords: Array<string | KeywordEntry> | string, options?: { wordBoundary?: boolean }): void {
         this._isSkipCache.clear();
         this._filterTextMap.children = {};
         this._filterTextMap.isEnd = false;
@@ -206,7 +217,7 @@ export class WordFilter {
                         bestEnd = j;
                         bestHasNonAscii = hasNonAscii;
                     }
-                } else if (charCount > 0 && this._isSkip(char, hasNonAscii)) {
+                } else if (charCount > 0 && this._isSkip(char, hasNonAscii || node.lenient)) {
                     j++;
                 } else {
                     break;
@@ -262,9 +273,11 @@ export class WordFilter {
         return result;
     }
 
-    private _initTextFilterMap(keywords: string[]) {
+    private _initTextFilterMap(keywords: Array<string | KeywordEntry>) {
         if (keywords) {
-            for (const keyword of keywords) {
+            for (const entry of keywords) {
+                const keyword = typeof entry === 'string' ? entry : entry.word;
+                const lenient = typeof entry === 'string' ? false : entry.lenient === true;
                 // 忽略 ASCII 单字关键字（如 "a"），避免过度匹配；中文等非 ASCII 单字保留（如"赌"）
                 if (!keyword || (keyword.length == 1 && keyword.charCodeAt(0) <= 127)) continue;
                 let node = this._filterTextMap;
@@ -274,6 +287,9 @@ export class WordFilter {
                         node.children[lcChar] = new WordNode();
                     }
                     node = node.children[lcChar];
+                    if (lenient) {
+                        node.lenient = true;
+                    }
                 }
                 node.isEnd = true;
             }

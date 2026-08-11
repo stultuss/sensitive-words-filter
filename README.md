@@ -15,6 +15,7 @@ A trie-based sensitive-word filter for Node.js. It scans text against a keyword 
 - **Flexible keyword loading** — pass an array, a single file, or a directory of keyword files
 - **Singleton or instances** — `WordFilter.instance()` for a shared instance, or `new WordFilter()` for independent dictionaries
 - **Word-boundary mode for pure-English text** — optional word-segmentation mode for English-only environments; restricts ASCII keywords to word-boundary matches (opt-in, off by default)
+- **Per-keyword lenient mode** — tag a keyword as `{ word: 'drug', lenient: true }` to let that word tolerate letter/digit fillers (`d1rug` matches `drug`); every other keyword stays strict
 
 ## Install
 
@@ -54,6 +55,11 @@ filter.init(['admin'], { wordBoundary: true });
 
 console.log(filter.replace('administrator admin admin123'));
 // administrator ***** admin123
+
+// Per-keyword lenient mode: only drug tolerates letter/digit fillers.
+filter.init(['admin', { word: 'drug', lenient: true }]);
+console.log(filter.replace('d1rug admin'));
+// **** *****
 ```
 
 ## Loading keywords
@@ -86,11 +92,12 @@ Returns the shared singleton instance.
 
 Creates an independent filter with its own dictionary — useful when different parts of an application need different keyword sets.
 
-### `init(keywords: string[] | string, options?: { wordBoundary?: boolean }): void`
+### `init(keywords: (string | { word: string; lenient?: boolean })[], options?: { wordBoundary?: boolean }): void`
 
 Synchronously builds the matching dictionary.
 
-- `keywords` — an array of keyword strings, or a path to a keyword file/directory.
+- `keywords` — an array of keyword strings or entries (`{ word, lenient }`), or a path to a keyword file/directory.
+- `lenient` (per entry) — when `true`, this keyword tolerates letters/digits as fillers even in pure-ASCII matches (`d1rug` matches `drug`). Off by default; note this also means `A1B` matches `AB` if `AB` is tagged lenient.
 - `options.wordBoundary` — a word-segmentation mode intended for pure-English environments. When `true`, pure-ASCII keywords only match at word boundaries: the character immediately before and after the keyword must not be a letter, digit, or underscore (same definition as `\b`), so `admin` no longer matches inside `administrator`. Off by default; CJK keywords are not affected.
 - Calling `init()` again **replaces** the existing dictionary.
 
@@ -127,6 +134,7 @@ Fully resets the filter: clears the preloaded character cache, the keyword dicti
 The non-ASCII rule prevents false positives in pure English text: with keyword `text`, the input `This is text` only masks `text` itself — the leading words are left untouched.
 
 - **English keywords match as plain substrings by default** — `admin` matches inside `administrator`, and `sex` inside `sexy`. For pure-English environments, pass `{ wordBoundary: true }` to `init()` to switch to word-segmentation mode: ASCII keywords only match at word boundaries (e.g. `init(['admin'], { wordBoundary: true })` masks `the admin` but leaves `administrator` and `admin123` untouched). CJK keywords are not affected; ASCII keywords are boundary-checked regardless of the surrounding text language.
+- **Per-keyword lenient mode** — tag a keyword as `{ word: 'drug', lenient: true }` to allow letter/digit fillers for that keyword even when the match is pure ASCII (`d1rug` matches `drug`). This is opt-in because it is a precision tradeoff: if `AB` is tagged lenient, `A1B` matches `AB` too.
 - **Single-character ASCII keywords are ignored** (e.g. `a`) to avoid over-matching; single-character CJK keywords (e.g. `赌`) are supported.
 - **Overlapping matches** are merged into a single masked region: with keywords `ABC` and `BCD`, the input `A B C D` is masked as `****`.
 
@@ -165,7 +173,7 @@ Test suites:
 
 - `tests/WordsFilter.test.ts` — 100 fixture-based integration cases (fails the run on any failure)
 - `tests/WordsFilter-New.test.ts` — 60 additional fixture-based cases (fails the run on any failure)
-- `tests/unit.test.ts` — 29 focused unit tests with assertions
+- `tests/unit.test.ts` — 33 focused unit tests with assertions
 
 ## License
 

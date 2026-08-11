@@ -197,6 +197,32 @@ test('clearCache 重置词边界配置', () => {
     assert.strictEqual(Filter.instance().replace('administrator'), '*****istrator');
 });
 
+// ===== 关键词 lenient 标注 =====
+
+test('lenient 标注-纯 ASCII 关键词允许字母/数字填充', () => {
+    Filter.instance().init([{ word: 'drug', lenient: true }]);
+    assert.strictEqual(Filter.instance().replace('d1rug'), '****');
+    assert.strictEqual(Filter.instance().replace('dr1ug'), '****');
+});
+
+test('lenient 标注-未标注的词保持严格默认', () => {
+    Filter.instance().init(['drug']);
+    assert.strictEqual(Filter.instance().replace('d1rug'), 'd1rug');
+    Filter.instance().init(['AB']);
+    assert.strictEqual(Filter.instance().replace('A1B'), 'A1B');
+});
+
+test('lenient 标注-按词生效不影响其他词', () => {
+    Filter.instance().init(['admin', { word: 'drug', lenient: true }]);
+    assert.strictEqual(Filter.instance().replace('d1rug admin administrator'), '**** ***** *****istrator');
+});
+
+test('lenient 标注-与 wordBoundary 叠加', () => {
+    Filter.instance().init([{ word: 'drug', lenient: true }], { wordBoundary: true });
+    assert.strictEqual(Filter.instance().replace('d1rug'), '****');
+    assert.strictEqual(Filter.instance().replace('xd1rugy'), 'xd1rugy');
+});
+
 // ===== 运行器 =====
 
 let passCount = 0;

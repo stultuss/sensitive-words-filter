@@ -40,6 +40,7 @@ class WordNode {
     constructor() {
         this.children = {};
         this.isEnd = false;
+        this.lenient = false;
     }
 }
 const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%……&*（）——+-=【】「」；\'："《》，。？/、　…・ '.split(''));
@@ -162,7 +163,7 @@ class WordFilter {
                         bestHasNonAscii = hasNonAscii;
                     }
                 }
-                else if (charCount > 0 && this._isSkip(char, hasNonAscii)) {
+                else if (charCount > 0 && this._isSkip(char, hasNonAscii || node.lenient)) {
                     j++;
                 }
                 else {
@@ -216,7 +217,9 @@ class WordFilter {
     }
     _initTextFilterMap(keywords) {
         if (keywords) {
-            for (const keyword of keywords) {
+            for (const entry of keywords) {
+                const keyword = typeof entry === 'string' ? entry : entry.word;
+                const lenient = typeof entry === 'string' ? false : entry.lenient === true;
                 if (!keyword || (keyword.length == 1 && keyword.charCodeAt(0) <= 127))
                     continue;
                 let node = this._filterTextMap;
@@ -226,6 +229,9 @@ class WordFilter {
                         node.children[lcChar] = new WordNode();
                     }
                     node = node.children[lcChar];
+                    if (lenient) {
+                        node.lenient = true;
+                    }
                 }
                 node.isEnd = true;
             }
