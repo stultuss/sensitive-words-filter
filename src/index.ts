@@ -21,11 +21,20 @@ const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%�
  */
 const CJK_RADICALS = new Set('灬氵辶亠力冂凵刂丶冫艹阝卩工廾丨彐钅冖宀疒爿丿犭饣彡礻扌厶纟亠忄讠衤廴夂丬罒ㄨ乚ㄐ｜ㄥㄣㄟ'.split(''));
 
+/**
+ * ASCII 词字符：字母、数字、下划线（与正则 \b 的 word character 一致）
+ */
+function isAsciiWordChar(char: string): boolean {
+    const code = char.charCodeAt(0);
+    return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
+}
+
 export class WordFilter {
     private static _instance: WordFilter | undefined;
     private _initialized: boolean;
     private readonly _filterTextMap: WordNode;
     private readonly _isSkipCache = new Map<string, boolean>();
+    private _wordBoundary: boolean = false;
 
     public constructor() {
         this._initialized = false;
@@ -92,10 +101,11 @@ export class WordFilter {
      * @param {string[] | string} keywords 敏感词数组，或词库文件/目录路径
      * @private
      */
-    public init(keywords: string[] | string): void {
+    public init(keywords: string[] | string, options?: { wordBoundary?: boolean }): void {
         this._isSkipCache.clear();
         this._filterTextMap.children = {};
         this._filterTextMap.isEnd = false;
+        this._wordBoundary = options?.wordBoundary === true;
         this._preloadSkipCache();  // 初始化时预加载所有特殊字符
         this._initTextFilterMap(typeof keywords === 'string' ? this._loadKeywordsFromFile(keywords) : keywords);
         this._initialized = true;
@@ -174,6 +184,7 @@ export class WordFilter {
             let bestCharCount = 0;
             let bestEnd = -1;
             let hasNonAscii = false;
+            let bestHasNonAscii = false;
             keywordPositions.length = 0;
 
             while (j < n) {
@@ -193,6 +204,7 @@ export class WordFilter {
                         // 记录该起点的最长匹配；匹配后继续走可能延伸到更长的关键词
                         bestCharCount = charCount;
                         bestEnd = j;
+                        bestHasNonAscii = hasNonAscii;
                     }
                 } else if (charCount > 0 && this._isSkip(char, hasNonAscii)) {
                     j++;
@@ -202,6 +214,18 @@ export class WordFilter {
             }
 
             if (bestEnd !== -1) {
+                // 词边界模式：纯 ASCII 关键词要求前后都不是词字符（字母/数字/下划线）
+                if (this._wordBoundary && !bestHasNonAscii) {
+                    const before = i > 0 ? searchValue[i - 1] : '';
+                    const lastPos = keywordPositions[bestCharCount - 1];
+                    const after = lastPos + 1 < n ? searchValue[lastPos + 1] : '';
+                    if (before !== '' && isAsciiWordChar(before)) {
+                        continue;
+                    }
+                    if (after !== '' && isAsciiWordChar(after)) {
+                        continue;
+                    }
+                }
                 diff[i] += 1;
                 diff[bestEnd] -= 1;
                 for (let k = 0; k < bestCharCount; k++) {
@@ -274,6 +298,7 @@ export class WordFilter {
         this._isSkipCache.clear();
         this._filterTextMap.children = {};
         this._filterTextMap.isEnd = false;
+        this._wordBoundary = false;
         this._initialized = false;
     }
 }

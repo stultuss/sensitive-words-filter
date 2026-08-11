@@ -158,6 +158,45 @@ test('大规模输入正确且无二次方退化', () => {
     assert.strictEqual(Filter.instance().replace(input), '**'.repeat(50000));
 });
 
+// ===== 词边界模式 =====
+
+test('词边界模式-默认关闭保持子串匹配', () => {
+    Filter.instance().init(['admin']);
+    assert.strictEqual(Filter.instance().replace('administrator'), '*****istrator');
+});
+
+test('词边界模式-不命中更长英文单词', () => {
+    Filter.instance().init(['admin'], { wordBoundary: true });
+    assert.strictEqual(Filter.instance().replace('administrator'), 'administrator');
+    assert.strictEqual(Filter.instance().replace('the admin said'), 'the ***** said');
+});
+
+test('词边界模式-数字属于词字符', () => {
+    Filter.instance().init(['admin'], { wordBoundary: true });
+    assert.strictEqual(Filter.instance().replace('admin123'), 'admin123');
+});
+
+test('词边界模式-中文与符号边界不受影响', () => {
+    Filter.instance().init(['admin'], { wordBoundary: true });
+    assert.strictEqual(Filter.instance().replace('关于admin的讨论'), '关于*****的讨论');
+    Filter.instance().init(['AB'], { wordBoundary: true });
+    assert.strictEqual(Filter.instance().replace('A-B'), '**');
+    assert.strictEqual(Filter.instance().replace('XAB'), 'XAB');
+    assert.strictEqual(Filter.instance().replace('ABY'), 'ABY');
+});
+
+test('词边界模式-中文关键词行为不变', () => {
+    Filter.instance().init(['治国'], { wordBoundary: true });
+    assert.strictEqual(Filter.instance().replace('治A国'), '**');
+});
+
+test('clearCache 重置词边界配置', () => {
+    Filter.instance().init(['admin'], { wordBoundary: true });
+    Filter.instance().clearCache();
+    Filter.instance().init(['admin']);
+    assert.strictEqual(Filter.instance().replace('administrator'), '*****istrator');
+});
+
 // ===== 运行器 =====
 
 let passCount = 0;

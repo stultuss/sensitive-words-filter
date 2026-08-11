@@ -14,6 +14,7 @@ A fast, DFA-based sensitive-word filter for Node.js. It scans text against a key
 - **Case-insensitive** — keywords and input text are matched case-insensitively
 - **Flexible keyword loading** — pass an array, a single file, or a directory of keyword files
 - **Singleton or instances** — `WordFilter.instance()` for a shared instance, or `new WordFilter()` for independent dictionaries
+- **Optional word-boundary mode** — restrict ASCII keywords to word-boundary matches (opt-in, off by default)
 
 ## Install
 
@@ -75,11 +76,12 @@ Returns the shared singleton instance.
 
 Creates an independent filter with its own dictionary — useful when different parts of an application need different keyword sets.
 
-### `init(keywords: string[] | string): void`
+### `init(keywords: string[] | string, options?: { wordBoundary?: boolean }): void`
 
 Synchronously builds the matching dictionary.
 
 - `keywords` — an array of keyword strings, or a path to a keyword file/directory.
+- `options.wordBoundary` — when `true`, pure-ASCII keywords only match at word boundaries: the character immediately before and after the keyword must not be a letter, digit, or underscore (same definition as `\b`). Off by default.
 - Calling `init()` again **replaces** the existing dictionary.
 
 ### `replace(searchValue: string, replaceValue?: string): string`
@@ -114,7 +116,7 @@ Fully resets the filter: clears the preloaded character cache, the keyword dicti
 
 The non-ASCII rule prevents false positives in pure English text: with keyword `text`, the input `This is text` only masks `text` itself — the leading words are left untouched.
 
-- **English keywords match as plain substrings** — `admin` also matches inside `administrator`, and `sex` inside `sexy`. There is no word-boundary detection; if you need it, add boundary logic to your keywords or input in your own pipeline.
+- **English keywords match as plain substrings by default** — `admin` matches inside `administrator`, and `sex` inside `sexy`. Pass `{ wordBoundary: true }` to `init()` to restrict ASCII keywords to word boundaries instead (e.g. `init(['admin'], { wordBoundary: true })` masks `the admin` but leaves `administrator` and `admin123` untouched). Chinese keywords are not affected by this option.
 - **Single-character ASCII keywords are ignored** (e.g. `a`) to avoid over-matching; single-character CJK keywords (e.g. `赌`) are supported.
 - **Overlapping matches** are merged into a single masked region: with keywords `ABC` and `BCD`, the input `A B C D` is masked as `****`.
 

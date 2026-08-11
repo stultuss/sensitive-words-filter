@@ -44,9 +44,14 @@ class WordNode {
 }
 const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%……&*（）——+-=【】「」；\'："《》，。？/、　…・ '.split(''));
 const CJK_RADICALS = new Set('灬氵辶亠力冂凵刂丶冫艹阝卩工廾丨彐钅冖宀疒爿丿犭饣彡礻扌厶纟亠忄讠衤廴夂丬罒ㄨ乚ㄐ｜ㄥㄣㄟ'.split(''));
+function isAsciiWordChar(char) {
+    const code = char.charCodeAt(0);
+    return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
+}
 class WordFilter {
     constructor() {
         this._isSkipCache = new Map();
+        this._wordBoundary = false;
         this._initialized = false;
         this._filterTextMap = new WordNode();
     }
@@ -84,10 +89,11 @@ class WordFilter {
         this._isSkipCache.set('\n', true);
         this._isSkipCache.set('\r', true);
     }
-    init(keywords) {
+    init(keywords, options) {
         this._isSkipCache.clear();
         this._filterTextMap.children = {};
         this._filterTextMap.isEnd = false;
+        this._wordBoundary = (options === null || options === void 0 ? void 0 : options.wordBoundary) === true;
         this._preloadSkipCache();
         this._initTextFilterMap(typeof keywords === 'string' ? this._loadKeywordsFromFile(keywords) : keywords);
         this._initialized = true;
@@ -137,6 +143,7 @@ class WordFilter {
             let bestCharCount = 0;
             let bestEnd = -1;
             let hasNonAscii = false;
+            let bestHasNonAscii = false;
             keywordPositions.length = 0;
             while (j < n) {
                 const char = searchValue[j].toLowerCase();
@@ -152,6 +159,7 @@ class WordFilter {
                     if (node.isEnd) {
                         bestCharCount = charCount;
                         bestEnd = j;
+                        bestHasNonAscii = hasNonAscii;
                     }
                 }
                 else if (charCount > 0 && this._isSkip(char, hasNonAscii)) {
@@ -162,6 +170,17 @@ class WordFilter {
                 }
             }
             if (bestEnd !== -1) {
+                if (this._wordBoundary && !bestHasNonAscii) {
+                    const before = i > 0 ? searchValue[i - 1] : '';
+                    const lastPos = keywordPositions[bestCharCount - 1];
+                    const after = lastPos + 1 < n ? searchValue[lastPos + 1] : '';
+                    if (before !== '' && isAsciiWordChar(before)) {
+                        continue;
+                    }
+                    if (after !== '' && isAsciiWordChar(after)) {
+                        continue;
+                    }
+                }
                 diff[i] += 1;
                 diff[bestEnd] -= 1;
                 for (let k = 0; k < bestCharCount; k++) {
@@ -222,6 +241,7 @@ class WordFilter {
         this._isSkipCache.clear();
         this._filterTextMap.children = {};
         this._filterTextMap.isEnd = false;
+        this._wordBoundary = false;
         this._initialized = false;
     }
 }
