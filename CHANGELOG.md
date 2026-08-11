@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
-- `init(keywords, { wordBoundary: true })` — optional word-boundary mode for ASCII keywords (off by default; with it enabled, `admin` no longer matches inside `administrator`)
+- `init(keywords, { wordBoundary: true })` — word-segmentation mode for pure-English environments (off by default; with it enabled, `admin` no longer matches inside `administrator`)
 - Full-width filler characters: ideographic space `　`, enumeration comma `、`, ellipsis `…`, full-width letters `Ａ-Ｚ ａ-ｚ` and digits `０-９`
 - Public constructor — `new WordFilter()` creates an independent instance; `WordFilter.instance()` remains the shared singleton
 - `benchmark/bench.js` and the `npm run bench` script

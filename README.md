@@ -14,7 +14,7 @@ A trie-based sensitive-word filter for Node.js. It scans text against a keyword 
 - **Case-insensitive** — keywords and input text are matched case-insensitively
 - **Flexible keyword loading** — pass an array, a single file, or a directory of keyword files
 - **Singleton or instances** — `WordFilter.instance()` for a shared instance, or `new WordFilter()` for independent dictionaries
-- **Optional word-boundary mode** — restrict ASCII keywords to word-boundary matches (opt-in, off by default)
+- **Word-boundary mode for pure-English text** — optional word-segmentation mode for English-only environments; restricts ASCII keywords to word-boundary matches (opt-in, off by default)
 
 ## Install
 
@@ -48,8 +48,10 @@ console.log(filter.replace('This is "治国｜治 国｜治A国｜治1国｜治@
 // Matching modes
 // Default (auto): per-match rules — CJK keywords tolerate letter/digit fillers
 // (治A国 matches 治国), while ASCII keywords do not (A1B stays unchanged).
-// Optional strict mode: ASCII keywords match only at word boundaries.
+// Word-boundary mode: for pure-English environments only — ASCII keywords
+// match at word boundaries, so admin no longer matches administrator.
 filter.init(['admin'], { wordBoundary: true });
+
 console.log(filter.replace('administrator admin admin123'));
 // administrator ***** admin123
 ```
@@ -89,7 +91,7 @@ Creates an independent filter with its own dictionary — useful when different 
 Synchronously builds the matching dictionary.
 
 - `keywords` — an array of keyword strings, or a path to a keyword file/directory.
-- `options.wordBoundary` — when `true`, pure-ASCII keywords only match at word boundaries: the character immediately before and after the keyword must not be a letter, digit, or underscore (same definition as `\b`). Off by default.
+- `options.wordBoundary` — a word-segmentation mode intended for pure-English environments. When `true`, pure-ASCII keywords only match at word boundaries: the character immediately before and after the keyword must not be a letter, digit, or underscore (same definition as `\b`), so `admin` no longer matches inside `administrator`. Off by default; CJK keywords are not affected.
 - Calling `init()` again **replaces** the existing dictionary.
 
 ### `replace(searchValue: string, replaceValue?: string): string`
@@ -124,7 +126,7 @@ Fully resets the filter: clears the preloaded character cache, the keyword dicti
 
 The non-ASCII rule prevents false positives in pure English text: with keyword `text`, the input `This is text` only masks `text` itself — the leading words are left untouched.
 
-- **English keywords match as plain substrings by default** — `admin` matches inside `administrator`, and `sex` inside `sexy`. Pass `{ wordBoundary: true }` to `init()` to restrict ASCII keywords to word boundaries instead (e.g. `init(['admin'], { wordBoundary: true })` masks `the admin` but leaves `administrator` and `admin123` untouched). Chinese keywords are not affected by this option.
+- **English keywords match as plain substrings by default** — `admin` matches inside `administrator`, and `sex` inside `sexy`. For pure-English environments, pass `{ wordBoundary: true }` to `init()` to switch to word-segmentation mode: ASCII keywords only match at word boundaries (e.g. `init(['admin'], { wordBoundary: true })` masks `the admin` but leaves `administrator` and `admin123` untouched). Chinese keywords and mixed-language text are not affected by this option.
 - **Single-character ASCII keywords are ignored** (e.g. `a`) to avoid over-matching; single-character CJK keywords (e.g. `赌`) are supported.
 - **Overlapping matches** are merged into a single masked region: with keywords `ABC` and `BCD`, the input `A B C D` is masked as `****`.
 
@@ -144,7 +146,7 @@ A pathological case — a single 500-character keyword over 20KB of repetitive t
 
 ## Limitations
 
-- **Substring matching by default** — English keywords match inside longer words (`admin` matches `administrator`). Enable `{ wordBoundary: true }` (see Matching rules) for stricter behavior.
+- **Substring matching by default** — English keywords match inside longer words (`admin` matches `administrator`). In pure-English environments, enable `{ wordBoundary: true }` (see Matching rules) to switch to word-segmentation mode.
 - **No full-width normalization** — full-width `ＡＢ` does not match keyword `AB`; full-width letters/digits are only treated as skippable fillers between keyword characters.
 - **Curated obfuscation coverage** — the skippable-filler set is a fixed list (symbols, whitespace, CJK radicals, full-width characters). Exotic tricks such as emoji, zero-width characters, or homoglyphs are not covered.
 - **Memory** — each `replace()` call allocates a small amount of memory proportional to the input length (coverage/star arrays); fine for typical messages, worth noting for very large documents.
