@@ -3,7 +3,7 @@ export declare class WordFilter {
     private _initialized;
     private readonly _filterTextMap;
     private readonly _isSkipCache;
-    private constructor();
+    constructor();
     static instance(): WordFilter;
     private _preloadSkipCache;
     init(keywords: string[] | string): void;

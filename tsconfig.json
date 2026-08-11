@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
-    "strict": false,
-    "strictNullChecks": false,
+    "strict": true,
     "target": "ES6",
     "module": "commonjs",
     "sourceMap": false,

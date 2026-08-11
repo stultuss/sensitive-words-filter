@@ -65,7 +65,7 @@ async function runTests() {
         { name: '符号混用 - @符号', input: 'exploit@server', expected: '*******@server' },
         { name: '符号混用 - $符号', input: 'password$库', expected: '********$库' },
         { name: '符号混用 - 括号', input: '禁(言)和禁(止)', expected: '**)和**)' },
-        { name: '符号混用 - 中文标点', input: '敏感、词、测', expected: '敏感、词、测' },
+        { name: '符号混用 - 中文标点', input: '敏感、词、测', expected: '***、测' },
         { name: '符号混用 - 双引号', input: '"赌博"和"诈骗"', expected: '"**"和"**"' },
         { name: '符号混用 - 单引号', input: '\'禁言\'和\'法轮功\'', expected: '\'**\'和\'***\'' },
 

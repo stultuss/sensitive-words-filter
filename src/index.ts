@@ -14,7 +14,7 @@ class WordNode {
 /**
  * 字符串转 Set 优化（时间复杂度 O(1)）
  */
-const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%……&*（）——+-=【】「」；\'："《》，。？/ '.split(''));
+const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%……&*（）——+-=【】「」；\'："《》，。？/、　…・ '.split(''));
 
 /**
  * CJK 偏旁部首集合
@@ -22,12 +22,12 @@ const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%�
 const CJK_RADICALS = new Set('灬氵辶亠力冂凵刂丶冫艹阝卩工廾丨彐钅冖宀疒爿丿犭饣彡礻扌厶纟亠忄讠衤廴夂丬罒ㄨ乚ㄐ｜ㄥㄣㄟ'.split(''));
 
 export class WordFilter {
-    private static _instance: WordFilter;
+    private static _instance: WordFilter | undefined;
     private _initialized: boolean;
     private readonly _filterTextMap: WordNode;
     private readonly _isSkipCache = new Map<string, boolean>();
 
-    private constructor() {
+    public constructor() {
         this._initialized = false;
         this._filterTextMap = new WordNode();
     }
@@ -68,6 +68,17 @@ export class WordFilter {
             this._isSkipCache.set(upper, true);
         }
 
+        // 6. 预加载全角数字 ０-９
+        for (let i = 0; i < 10; i++) {
+            this._isSkipCache.set(String.fromCharCode(0xFF10 + i), true);
+        }
+
+        // 7. 预加载全角英文字母 Ａ-Ｚ / ａ-ｚ
+        for (let i = 0; i < 26; i++) {
+            this._isSkipCache.set(String.fromCharCode(0xFF21 + i), true);  // Ａ-Ｚ
+            this._isSkipCache.set(String.fromCharCode(0xFF41 + i), true);  // ａ-ｚ
+        }
+
         // 5. 预加载常见的空格和控制字符
         this._isSkipCache.set(' ', true);   // 空格
         this._isSkipCache.set('\t', true);  // 制表符
@@ -82,17 +93,12 @@ export class WordFilter {
      * @private
      */
     public init(keywords: string[] | string): void {
-        try {
-            this._isSkipCache.clear();
-            this._filterTextMap.children = {};
-            this._filterTextMap.isEnd = false;
-            this._preloadSkipCache();  // 初始化时预加载所有特殊字符
-            this._initTextFilterMap(typeof keywords === 'string' ? this._loadKeywordsFromFile(keywords) : keywords);
-            this._initialized = true;
-        } catch (e) {
-            console.error('WordFilter initialization failed:', e);
-            throw e;
-        }
+        this._isSkipCache.clear();
+        this._filterTextMap.children = {};
+        this._filterTextMap.isEnd = false;
+        this._preloadSkipCache();  // 初始化时预加载所有特殊字符
+        this._initTextFilterMap(typeof keywords === 'string' ? this._loadKeywordsFromFile(keywords) : keywords);
+        this._initialized = true;
     }
 
     /**
@@ -142,75 +148,91 @@ export class WordFilter {
     }
 
     /**
-     * 优化版本的 replace 方法
-     * 优化点：
-     * 1. replacements 中保存 charCount，避免第二步重新计算
-     * 2. _isSkip 使用缓存，避免重复正则判断
+     * 扫描文本并替换命中的敏感词。
+     *
+     * 第一遍：从每个起点找该起点的最长匹配，用差分数组记录命中区间，
+     * 并用 starAt 逐位置标记匹配到的关键词字符（重叠区间自动去重）。
+     * 第二遍：根据覆盖深度合并重叠/相邻区间，整段替换为 replaceValue
+     * 重复（关键词字符数）次。跨起点的重叠匹配不再产生长度错乱。
      */
     public replace(searchValue: string, replaceValue: string = '*'): string {
         if (!this._initialized) {
             return searchValue;
         }
 
-        // 优化后的结构：包含 charCount
-        interface Replacement {
-            start: number;
-            end: number;
-            charCount: number;  // ← 新增字段
-        }
+        const n = searchValue.length;
+        // diff 前缀和 > 0 表示该位置处于某个命中区间内
+        const diff = new Int32Array(n + 1);
+        // starAt 标记该位置是否属于匹配到的关键词字符（按位置去重）
+        const starAt = new Uint8Array(n);
+        const keywordPositions: number[] = [];
 
-        const replacements: Replacement[] = [];
-
-        for (let i = 0; i < searchValue.length; i++) {
+        for (let i = 0; i < n; i++) {
             let node = this._filterTextMap;
             let charCount = 0;
             let j = i;
-            let matchEnd = i;
+            let bestCharCount = 0;
+            let bestEnd = -1;
             let hasNonAscii = false;
+            keywordPositions.length = 0;
 
-            while (j < searchValue.length) {
+            while (j < n) {
                 const char = searchValue[j].toLowerCase();
 
-                if (node.children[char]) {
-                    node = node.children[char];
+                const next = node.children[char];
+                if (next) {
+                    node = next;
                     if (char.charCodeAt(0) > 127) {
                         hasNonAscii = true;
                     }
                     charCount++;
-                    matchEnd = j + 1;
+                    keywordPositions.push(j);
                     j++;
 
                     if (node.isEnd) {
-                        // 检查是否已经有从相同起始位置的匹配
-                        const existingIndex = replacements.findIndex(r => r.start === i);
-                        if (existingIndex !== -1) {
-                            // 如果新匹配更长，才替换；否则保持现状
-                            if (charCount > replacements[existingIndex].charCount) {
-                                replacements[existingIndex] = { start: i, end: matchEnd, charCount };
-                            }
-                        } else {
-                            // 没有重复，直接添加
-                            replacements.push({ start: i, end: matchEnd, charCount });
-                        }
+                        // 记录该起点的最长匹配；匹配后继续走可能延伸到更长的关键词
+                        bestCharCount = charCount;
+                        bestEnd = j;
                     }
                 } else if (charCount > 0 && this._isSkip(char, hasNonAscii)) {
-                    // _isSkip 使用缓存
-                    matchEnd = j + 1;
                     j++;
                 } else {
                     break;
                 }
             }
+
+            if (bestEnd !== -1) {
+                diff[i] += 1;
+                diff[bestEnd] -= 1;
+                for (let k = 0; k < bestCharCount; k++) {
+                    starAt[keywordPositions[k]] = 1;
+                }
+            }
         }
 
-        // 第二步：从后向前进行替换
-        let result = searchValue;
-        for (let k = replacements.length - 1; k >= 0; k--) {
-            const {start, end, charCount} = replacements[k];
-
-            // 直接使用保存的 charCount，不需要重新计算
-            const replacement = replaceValue.repeat(charCount);
-            result = result.slice(0, start) + replacement + result.slice(end);
+        // 第二遍：按覆盖深度合并重叠/相邻区间，逐段输出
+        let result = '';
+        let depth = 0;
+        let segStars = 0;
+        let inSegment = false;
+        for (let i = 0; i < n; i++) {
+            depth += diff[i];
+            if (depth > 0) {
+                inSegment = true;
+                if (starAt[i]) {
+                    segStars++;
+                }
+            } else {
+                if (inSegment) {
+                    result += replaceValue.repeat(segStars);
+                    segStars = 0;
+                    inSegment = false;
+                }
+                result += searchValue[i];
+            }
+        }
+        if (inSegment) {
+            result += replaceValue.repeat(segStars);
         }
 
         return result;

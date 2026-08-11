@@ -539,7 +539,7 @@ async function runTests() {
         {
             name: '符号密集 - 中文标点',
             input: '敏、感、词，测/试，过-滤',
-            expected: '敏、感、词，**，**'
+            expected: '***，**，**'
         },
         {
             name: '符号密集 - 数学符号',

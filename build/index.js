@@ -42,7 +42,7 @@ class WordNode {
         this.isEnd = false;
     }
 }
-const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%……&*（）——+-=【】「」；\'："《》，。？/ '.split(''));
+const SYMBOL_STRING = new Set('\`·~!@#$%^&*()_+-={}[];\':",.< >?|/～！@#¥%……&*（）——+-=【】「」；\'："《》，。？/、　…・ '.split(''));
 const CJK_RADICALS = new Set('灬氵辶亠力冂凵刂丶冫艹阝卩工廾丨彐钅冖宀疒爿丿犭饣彡礻扌厶纟亠忄讠衤廴夂丬罒ㄨ乚ㄐ｜ㄥㄣㄟ'.split(''));
 class WordFilter {
     constructor() {
@@ -72,24 +72,25 @@ class WordFilter {
             this._isSkipCache.set(lower, true);
             this._isSkipCache.set(upper, true);
         }
+        for (let i = 0; i < 10; i++) {
+            this._isSkipCache.set(String.fromCharCode(0xFF10 + i), true);
+        }
+        for (let i = 0; i < 26; i++) {
+            this._isSkipCache.set(String.fromCharCode(0xFF21 + i), true);
+            this._isSkipCache.set(String.fromCharCode(0xFF41 + i), true);
+        }
         this._isSkipCache.set(' ', true);
         this._isSkipCache.set('\t', true);
         this._isSkipCache.set('\n', true);
         this._isSkipCache.set('\r', true);
     }
     init(keywords) {
-        try {
-            this._isSkipCache.clear();
-            this._filterTextMap.children = {};
-            this._filterTextMap.isEnd = false;
-            this._preloadSkipCache();
-            this._initTextFilterMap(typeof keywords === 'string' ? this._loadKeywordsFromFile(keywords) : keywords);
-            this._initialized = true;
-        }
-        catch (e) {
-            console.error('WordFilter initialization failed:', e);
-            throw e;
-        }
+        this._isSkipCache.clear();
+        this._filterTextMap.children = {};
+        this._filterTextMap.isEnd = false;
+        this._preloadSkipCache();
+        this._initTextFilterMap(typeof keywords === 'string' ? this._loadKeywordsFromFile(keywords) : keywords);
+        this._initialized = true;
     }
     _loadKeywordsFromFile(filePath) {
         const keywords = [];
@@ -125,49 +126,72 @@ class WordFilter {
         if (!this._initialized) {
             return searchValue;
         }
-        const replacements = [];
-        for (let i = 0; i < searchValue.length; i++) {
+        const n = searchValue.length;
+        const diff = new Int32Array(n + 1);
+        const starAt = new Uint8Array(n);
+        const keywordPositions = [];
+        for (let i = 0; i < n; i++) {
             let node = this._filterTextMap;
             let charCount = 0;
             let j = i;
-            let matchEnd = i;
+            let bestCharCount = 0;
+            let bestEnd = -1;
             let hasNonAscii = false;
-            while (j < searchValue.length) {
+            keywordPositions.length = 0;
+            while (j < n) {
                 const char = searchValue[j].toLowerCase();
-                if (node.children[char]) {
-                    node = node.children[char];
+                const next = node.children[char];
+                if (next) {
+                    node = next;
                     if (char.charCodeAt(0) > 127) {
                         hasNonAscii = true;
                     }
                     charCount++;
-                    matchEnd = j + 1;
+                    keywordPositions.push(j);
                     j++;
                     if (node.isEnd) {
-                        const existingIndex = replacements.findIndex(r => r.start === i);
-                        if (existingIndex !== -1) {
-                            if (charCount > replacements[existingIndex].charCount) {
-                                replacements[existingIndex] = { start: i, end: matchEnd, charCount };
-                            }
-                        }
-                        else {
-                            replacements.push({ start: i, end: matchEnd, charCount });
-                        }
+                        bestCharCount = charCount;
+                        bestEnd = j;
                     }
                 }
                 else if (charCount > 0 && this._isSkip(char, hasNonAscii)) {
-                    matchEnd = j + 1;
                     j++;
                 }
                 else {
                     break;
                 }
             }
+            if (bestEnd !== -1) {
+                diff[i] += 1;
+                diff[bestEnd] -= 1;
+                for (let k = 0; k < bestCharCount; k++) {
+                    starAt[keywordPositions[k]] = 1;
+                }
+            }
         }
-        let result = searchValue;
-        for (let k = replacements.length - 1; k >= 0; k--) {
-            const { start, end, charCount } = replacements[k];
-            const replacement = replaceValue.repeat(charCount);
-            result = result.slice(0, start) + replacement + result.slice(end);
+        let result = '';
+        let depth = 0;
+        let segStars = 0;
+        let inSegment = false;
+        for (let i = 0; i < n; i++) {
+            depth += diff[i];
+            if (depth > 0) {
+                inSegment = true;
+                if (starAt[i]) {
+                    segStars++;
+                }
+            }
+            else {
+                if (inSegment) {
+                    result += replaceValue.repeat(segStars);
+                    segStars = 0;
+                    inSegment = false;
+                }
+                result += searchValue[i];
+            }
+        }
+        if (inSegment) {
+            result += replaceValue.repeat(segStars);
         }
         return result;
     }

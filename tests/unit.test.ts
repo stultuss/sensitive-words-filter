@@ -111,6 +111,53 @@ test('大小写不敏感', () => {
     assert.strictEqual(Filter.instance().replace('Text'), '****');
 });
 
+// ===== 重叠匹配 =====
+
+test('重叠匹配-跨起点合并（ABC/BCD 输入 "A B C D"）', () => {
+    Filter.instance().init(['ABC', 'BCD']);
+    assert.strictEqual(Filter.instance().replace('A B C D'), '****');
+    assert.strictEqual(Filter.instance().replace('ABCD'), '****');
+});
+
+test('重叠匹配-部分重叠（AB/BC 输入 "A B C"）', () => {
+    Filter.instance().init(['AB', 'BC']);
+    assert.strictEqual(Filter.instance().replace('A B C'), '***');
+});
+
+test('重叠匹配-不重叠时保留间隔', () => {
+    Filter.instance().init(['AB', 'CD']);
+    assert.strictEqual(Filter.instance().replace('A B C D'), '** **');
+    assert.strictEqual(Filter.instance().replace('ABCD'), '****');
+});
+
+// ===== 全角/中文混淆字符 =====
+
+test('全角空格/顿号/省略号可作为填充字符', () => {
+    Filter.instance().init(['治国']);
+    assert.strictEqual(Filter.instance().replace('治　国'), '**');
+    assert.strictEqual(Filter.instance().replace('治、国'), '**');
+    assert.strictEqual(Filter.instance().replace('治…国'), '**');
+});
+
+test('全角字母数字可作为中文关键词的填充字符', () => {
+    Filter.instance().init(['治国']);
+    assert.strictEqual(Filter.instance().replace('治Ａ国'), '**');
+    assert.strictEqual(Filter.instance().replace('治０国'), '**');
+});
+
+test('全角字母不归一化为 ASCII 关键词', () => {
+    Filter.instance().init(['AB']);
+    assert.strictEqual(Filter.instance().replace('ＡＢ'), 'ＡＢ');
+});
+
+// ===== 大规模输入 =====
+
+test('大规模输入正确且无二次方退化', () => {
+    Filter.instance().init(['赌博']);
+    const input = '赌博'.repeat(50000);
+    assert.strictEqual(Filter.instance().replace(input), '**'.repeat(50000));
+});
+
 // ===== 运行器 =====
 
 let passCount = 0;
